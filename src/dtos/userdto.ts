@@ -4,4 +4,10 @@ interface RegisterDTO {
     username: string;
 };
 
-export default RegisterDTO;
+interface LoginDto {
+    email: string;
+    password: string;
+    username: string;
+};
+
+export { RegisterDTO, LoginDto };
