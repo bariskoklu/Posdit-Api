@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from "express";
+import express from 'express';
 import * as jwt from "jsonwebtoken";
 import { UserModel } from "../models/users";
 import { Result } from "helpers";
 
 export const IsAuthenticated = (
-    async (req: Request, res: Response, next: NextFunction) => {
+    async (req: express.Request, res: express.Response, next: express.NextFunction) => {
         let token;
         if (
             req.headers.authorization.startsWith("Bearer") &&

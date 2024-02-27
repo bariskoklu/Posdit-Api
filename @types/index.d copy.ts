@@ -1,4 +1,4 @@
-import { IUser } from "../../src/models/users";
+import { IUser } from "../src/models/users";
 
 export { };
 

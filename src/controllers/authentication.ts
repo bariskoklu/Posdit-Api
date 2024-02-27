@@ -13,6 +13,7 @@ export const register = async (req: express.Request, res: express.Response) => {
             error: "Please provide an email, a password and a username",
         });
     }
+    
     const salt = random();
     const passwordWithSalt = authentication(salt, registerDTO.password);
     const [error, user] = await Result(UserModel.create({
