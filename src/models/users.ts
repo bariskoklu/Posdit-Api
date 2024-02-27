@@ -5,8 +5,8 @@ export interface IUser extends mongoose.Document {
     email: string;
     authentication: {
         password: string,
-        salt?: String,
-        sessionToken?: String,
+        salt?: string,
+        sessionToken?: string,
     },
 }
 
