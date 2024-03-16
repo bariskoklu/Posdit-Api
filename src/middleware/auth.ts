@@ -1,7 +1,7 @@
 import express from 'express';
 import * as jwt from "jsonwebtoken";
 import { UserModel } from "../models/users";
-import { Result } from "helpers";
+import { Result } from "../helpers";
 
 export const IsAuthenticated = (
     async (req: express.Request, res: express.Response, next: express.NextFunction) => {
