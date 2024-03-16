@@ -7,9 +7,9 @@ import comment from "./comment";
 const router = express.Router();
 
 export default (): express.Router => {
-    authentication(router);
-    post(router);
-    comment(router);
+  authentication(router);
+  post(router);
+  comment(router);
 
-    return router;
+  return router;
 }

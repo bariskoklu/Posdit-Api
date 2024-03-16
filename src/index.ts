@@ -20,7 +20,7 @@ const server = http.createServer(app);
 const port = process.env.PORT;
 
 server.listen(port, () => {
-    console.log(`Server is running in ${process.env.NODE_ENV} mode on port ${port}`);
+  console.log(`Server is running in ${process.env.NODE_ENV} mode on port ${port}`);
 });
 
 const MONGO_URL = process.env.MONGO_URI;
