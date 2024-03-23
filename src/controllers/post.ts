@@ -7,20 +7,6 @@ import { Result } from "../helpers";
 // @access  private
 export const createPost = async (req: Request, res: Response) => {
 
-  const searchQuery = req.params.query;
-  console.log(searchQuery);
-  const pipeline = [];
-
-  pipeline.push({
-    $search: {
-      index: 'posts',
-      text: {
-        query: searchQuery,
-        path: ['context', 'title'],
-        fuzzy: {},
-      },
-    },
-  });
   const post = await PostModel.create(req.body);
   return res.status(200).json({
     success: true,
