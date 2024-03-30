@@ -1,13 +1,36 @@
 import { Request, Response } from "express";
 import { IPost, PostModel } from '../models/posts';
 import { Result } from "../helpers";
+import { UploadMedia, getSignedUrlForMedia } from "helpers/s3Helper";
+import { GetPostDto } from "dtos/postdto";
 
 // @desc    create post
 // @route   POST /api/posts
 // @access  private
 export const createPost = async (req: Request, res: Response) => {
+  const [s3UploadError, s3FileKey] = await Result(UploadMedia(req.body.file));
 
-  const post = await PostModel.create(req.body);
+  if (s3UploadError) {
+    return res.status(400).json({
+      success: false,
+      error: s3UploadError.message,
+    });
+  }
+
+  const postToCreate: IPost = {
+    ...req.body,
+    fileKey: s3FileKey
+  }
+
+  const [error, post] = await Result(PostModel.create(postToCreate));
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      error: error.message,
+    });
+  }
+
   return res.status(200).json({
     success: true,
     data: post,
@@ -20,6 +43,7 @@ export const createPost = async (req: Request, res: Response) => {
 export const getPosts = async (req: Request, res: Response) => {
   const searchQuery = req.query.query;
   var posts: IPost[];
+  var postDtos: GetPostDto[];
   var error: Error;
 
   if (searchQuery) {
@@ -43,10 +67,43 @@ export const getPosts = async (req: Request, res: Response) => {
     [error, posts] = await Result(PostModel.find());
   }
 
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      error: error.message,
+    });
+  }
+
+  if (posts.length === 0) {
+    return res.status(404).json({
+      success: false,
+      error: `Post not found with id of ${req.params.id}`,
+    });
+  }
+
+  posts.forEach(async post => {
+    const postDto: GetPostDto = {
+      ...post,
+      signedUrl: null
+    };
+
+    const [getSignedUrlerror, url] = await Result(getSignedUrlForMedia(post.fileKey));
+
+    if (getSignedUrlerror) {
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    postDtos.push(postDto);
+
+  });
+
   return res.status(200).json({
     success: true,
-    count: posts.length,
-    data: posts,
+    count: postDtos.length,
+    data: postDtos,
   });
 };
 
@@ -70,9 +127,27 @@ export const getPost = async (req: Request, res: Response) => {
     });
   }
 
+  const postDto: GetPostDto = {
+    ...post,
+    signedUrl: null
+  };
+
+  const [getSignedUrlerror, url] = await Result(getSignedUrlForMedia(post.fileKey));
+
+  if (getSignedUrlerror) {
+    return res.status(400).json({
+      success: false,
+      error: error.message,
+    });
+  }
+
+  postDto.signedUrl = url;
+
+
+
   res.status(200).json({
     success: true,
-    data: post,
+    data: postDto,
   });
 };
 
