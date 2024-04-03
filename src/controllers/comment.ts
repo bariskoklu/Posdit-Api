@@ -7,7 +7,46 @@ import { Result } from "../helpers";
 // @access  private
 export const createComment =
   async (req: Request, res: Response) => {
-    const comment = await CommentModel.create(req.body);
+
+
+    const [error, comment] = await Result(CommentModel.create(req.body));
+
+    if (req.body.parentId) {
+      var [parentCommentError, parentComment] = await Result(CommentModel.findById(req.body.parentId));
+
+      if (parentCommentError) {
+        return res.status(400).json({
+          success: true,
+          error: parentCommentError.message,
+        });
+      }
+
+      if (!parentComment) {
+        return res.status(404).json({
+          success: false,
+          error: `Comment not found with id of ${req.body.parentId}`,
+        });
+      }
+
+      parentComment.replies.push(comment.id);
+
+      [parentCommentError, parentComment] = await Result(parentComment.save());
+
+      if (parentCommentError) {
+        return res.status(400).json({
+          success: true,
+          error: parentCommentError.message,
+        });
+      }
+
+      if (!parentComment) {
+        return res.status(404).json({
+          success: false,
+          error: `Comment not found with id of ${req.body.parentId}`,
+        });
+      }
+    }
+
     return res.status(200).json({
       success: true,
       data: comment,
@@ -18,7 +57,42 @@ export const createComment =
 // @route   GET /api/comments
 // @access  public
 export const getComments = async (req: Request, res: Response) => {
-  const comments = await CommentModel.find();
+  // const comments = await CommentModel.find();
+
+  const [error, comments] = await Result(CommentModel.aggregate([
+    {
+      $lookup: {
+        from: "Comment",
+        localField: "$replies",
+        foreignField: "_id",
+        as: "repliesDetailed",
+        pipeline: [
+          {
+            $lookup: {
+              from: "Comment",
+              localField: "$replies",
+              foreignField: "_id",
+              as: "repliesDetailed",
+            }
+          }
+        ]
+      }
+    }
+  ]))
+
+  if (error) {
+    return res.status(400).json({
+      success: true,
+      error: error.message,
+    });
+  }
+
+  if (!comments) {
+    return res.status(404).json({
+      success: false,
+      error: `Comment not found with id of ${req.params.id}`,
+    });
+  }
 
   return res.status(200).json({
     success: true,
@@ -31,7 +105,62 @@ export const getComments = async (req: Request, res: Response) => {
 // @route   GET /api/comments/:id
 // @access  public
 export const getComment = async (req: Request, res: Response) => {
-  const [error, comment] = await Result(CommentModel.findById(req.params.id));
+  // const [error, comment] = await Result(CommentModel.findById(req.params.id));
+
+  // const [error, comment] = await Result(CommentModel.aggregate([
+  //   {
+  //     $match: {
+  //       _id: req.params.id
+  //     },
+  //     $graphLookup: {
+  //       from: "comment",
+  //       startWith: "$parentId",
+  //       connectFromField: "parentId",
+  //       connectToField: "_id",
+  //       as: "reportingHierarchy"
+  //     }
+  //   }
+  // ]))
+  var matchPipeline;
+
+  if (req.params.id) {
+    matchPipeline = {
+      $match: {
+        _id: req.params.id
+      },
+    }
+  }
+  else if (req.query.parentId) {
+    matchPipeline = {
+      $match: {
+        parentId: req.query.parentId
+      },
+    }
+  }
+
+
+
+  const [error, comment] = await Result(CommentModel.aggregate([
+    matchPipeline,
+    {
+      $lookup: {
+        from: "Comment",
+        localField: "$replies",
+        foreignField: "_id",
+        as: "repliesDetailed",
+        pipeline: [
+          {
+            $lookup: {
+              from: "Comment",
+              localField: "$replies",
+              foreignField: "_id",
+              as: "repliesDetailed",
+            }
+          }
+        ]
+      }
+    }
+  ]))
 
   if (error) {
     return res.status(400).json({
@@ -100,6 +229,45 @@ export const deleteComment = async (req: Request, res: Response) => {
       success: false,
       error: `Comment not found with id of ${req.params.id}`,
     });
+  }
+
+  if (!comment.parentId) {
+    var [parentCommentError, parentComment] = await Result(CommentModel.findById(req.body.parentId));
+
+    if (parentCommentError) {
+      return res.status(400).json({
+        success: true,
+        error: parentCommentError.message,
+      });
+    }
+
+    if (!parentComment) {
+      return res.status(404).json({
+        success: false,
+        error: `Comment not found with id of ${req.body.parentId}`,
+      });
+    }
+
+    const index = parentComment.replies.indexOf(comment.id);
+    if (index > -1) {
+      parentComment.replies.splice(index, 1);
+    }
+
+    [parentCommentError, parentComment] = await Result(parentComment.save());
+
+    if (parentCommentError) {
+      return res.status(400).json({
+        success: true,
+        error: parentCommentError.message,
+      });
+    }
+
+    if (!parentComment) {
+      return res.status(404).json({
+        success: false,
+        error: `Comment not found with id of ${req.body.parentId}`,
+      });
+    }
   }
 
   res.status(200).json({

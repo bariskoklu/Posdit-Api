@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { IPost, PostModel } from '../models/posts';
 import { Result } from "../helpers";
-import { UploadMedia, getSignedUrlForMedia } from "helpers/s3Helper";
+import { UploadMedia, getSignedUrlForMedia } from "../helpers/s3Helper";
 import { GetPostDto } from "dtos/postdto";
 
 // @desc    create post
@@ -97,7 +97,6 @@ export const getPosts = async (req: Request, res: Response) => {
     }
 
     postDtos.push(postDto);
-
   });
 
   return res.status(200).json({
