@@ -3,12 +3,13 @@ import http from 'http';
 import mongoose from 'mongoose';
 import 'dotenv/config';
 import router from './router';
+import cors from 'cors';
 
 const app = express();
 
-// app.use(cors({
-//     credentials: true,
-// }));
+app.use(cors({
+  credentials: true,
+}));
 
 // app.use(compression());
 // app.use(bodyParser.json());

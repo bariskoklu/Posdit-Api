@@ -37,18 +37,18 @@ export const createPost = async (req: Request, res: Response) => {
   });
 };
 
-// @desc    show all posts
+// @desc    show all or some posts with query
 // @route   GET /api/posts
 // @access  public
 export const getPosts = async (req: Request, res: Response) => {
   const searchQuery = req.query.query;
-  var posts: IPost[];
-  var postDtos: GetPostDto[];
-  var error: Error;
+  let posts: IPost[];
+  let postDtos: GetPostDto[] = [];
+  let error: Error;
+
+  let pipeline = [];
 
   if (searchQuery) {
-    const pipeline = [];
-
     pipeline.push({
       $search: {
         index: 'posts',
@@ -59,13 +59,21 @@ export const getPosts = async (req: Request, res: Response) => {
         },
       },
     });
-
-    [error, posts] = await Result(PostModel.aggregate(pipeline));
-
   }
-  else {
-    [error, posts] = await Result(PostModel.find());
-  }
+
+  pipeline.push({
+    $project: {  // This stage specifies the fields to include or exclude
+      title: 1,
+      content: 1,
+      fileKey: 1,
+      upvotes: 1,
+      downvotes: 1,
+      createUser: 1,
+      createDate: 1
+    }
+  });
+
+  [error, posts] = await Result(PostModel.aggregate(pipeline));
 
   if (error) {
     return res.status(400).json({
@@ -77,27 +85,34 @@ export const getPosts = async (req: Request, res: Response) => {
   if (posts.length === 0) {
     return res.status(404).json({
       success: false,
-      error: `Post not found with id of ${req.params.id}`,
+      error: 'No posts found',
     });
   }
 
-  posts.forEach(async post => {
+  for (const post of posts) {
+    console.log(post);
     const postDto: GetPostDto = {
       ...post,
       signedUrl: null
     };
 
-    const [getSignedUrlerror, url] = await Result(getSignedUrlForMedia(post.fileKey));
+    const [getSignedUrlError, url] = await Result(getSignedUrlForMedia(post.fileKey));
 
-    if (getSignedUrlerror) {
+    if (getSignedUrlError) {
       return res.status(400).json({
         success: false,
-        error: error.message,
+        error: getSignedUrlError.message,
       });
     }
 
+    if (url) {
+      postDto.signedUrl = url;
+    }
+
     postDtos.push(postDto);
-  });
+  }
+
+  console.log(postDtos);
 
   return res.status(200).json({
     success: true,
@@ -105,6 +120,7 @@ export const getPosts = async (req: Request, res: Response) => {
     data: postDtos,
   });
 };
+
 
 // @desc    show single post
 // @route   GET /api/posts/:id

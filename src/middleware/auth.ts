@@ -18,6 +18,9 @@ export const IsAuthenticated = (
         error: "Not autorized to access this route",
       });
     }
+
+    console.log(token);
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET as jwt.Secret);
     const [error, user] = await Result(UserModel.findById((<any>decoded).id));
     if (error) {

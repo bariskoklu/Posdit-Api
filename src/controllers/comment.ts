@@ -138,8 +138,6 @@ export const getComment = async (req: Request, res: Response) => {
     }
   }
 
-
-
   const [error, comment] = await Result(CommentModel.aggregate([
     matchPipeline,
     {
