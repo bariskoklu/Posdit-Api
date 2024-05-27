@@ -126,7 +126,7 @@ export const getPosts = async (req: Request, res: Response) => {
 // @route   GET /api/posts/:id
 // @access  public
 export const getPost = async (req: Request, res: Response) => {
-  const [error, post] = await Result(PostModel.findById(req.params.id));
+  const [error, post] = await Result(PostModel.findById(req.params.id).lean());
 
   if (error) {
     return res.status(400).json({
@@ -134,6 +134,7 @@ export const getPost = async (req: Request, res: Response) => {
       error: error.message,
     });
   }
+  console.log(post);
 
   if (!post) {
     return res.status(404).json({
