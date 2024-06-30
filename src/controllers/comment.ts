@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { IComment, CommentModel } from '../models/comments';
 import { Result } from "../helpers";
+import mongoose, { Mongoose } from "mongoose";
+import { GetCommentDto } from "dtos/commentdto";
 
 // @desc    create comment
 // @route   POST /api/comments
@@ -58,27 +60,36 @@ export const createComment =
 // @access  public
 export const getComments = async (req: Request, res: Response) => {
   // const comments = await CommentModel.find();
+  const userId = req.user._id as mongoose.Types.ObjectId;
 
-  const [error, comments] = await Result(CommentModel.aggregate([
+  const [error, comments] = await Result(CommentModel.aggregate<GetCommentDto>([
     {
       $lookup: {
-        from: "Comment",
-        localField: "$replies",
+        from: "comments",
+        localField: "replies",
         foreignField: "_id",
         as: "repliesDetailed",
         pipeline: [
           {
             $lookup: {
-              from: "Comment",
-              localField: "$replies",
+              from: "comments",
+              localField: "replies",
               foreignField: "_id",
               as: "repliesDetailed",
             }
           }
         ]
       }
+    },
+    {
+      $addFields: {
+        upvoteCount: { $size: "$upvotes" },
+        downvoteCount: { $size: "$downvotes" },
+        isUpvotedByUser: { $in: [userId, "$upvotes"] },
+        isDownvotedByUser: { $in: [userId, "$downvotes"] }
+      }
     }
-  ]))
+  ]));
 
   if (error) {
     return res.status(400).json({
@@ -122,6 +133,7 @@ export const getComment = async (req: Request, res: Response) => {
   //   }
   // ]))
   var matchPipeline;
+  const userId = req.user._id as mongoose.Types.ObjectId;
 
   if (req.params.id) {
     matchPipeline = {
@@ -156,6 +168,14 @@ export const getComment = async (req: Request, res: Response) => {
             }
           }
         ]
+      }
+    },
+    {
+      $addFields: {
+        upvoteCount: { $size: "$upvotes" },
+        downvoteCount: { $size: "$downvotes" },
+        isUpvotedByUser: { $in: [userId, "$upvotes"] },
+        isDownvotedByUser: { $in: [userId, "$downvotes"] }
       }
     }
   ]))

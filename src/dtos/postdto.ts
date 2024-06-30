@@ -8,6 +8,10 @@ interface GetPostDto {
   downvotes: [mongoose.Schema.Types.ObjectId];
   createUser: mongoose.Schema.Types.ObjectId;
   createDate: Date;
+  upvoteCount: Number;
+  downvoteCount: Number;
+  IsUpvotedByUser: boolean;
+  IsDownvotedByUser: boolean;
 };
 
 export { GetPostDto };

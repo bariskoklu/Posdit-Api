@@ -8,10 +8,10 @@ interface S3SetupResult {
 }
 
 const SetUpS3 = (): S3SetupResult => {
-  const bucketName = process.env.BUCKET_NAME;
-  const bucketRegion = process.env.BUCKET_REGION;
-  const accessKey = process.env.ACCESS_KEY;
-  const secretAccessKey = process.env.SECRET_ACCESS_KEY;
+  const bucketName = process.env.S3_BUCKET_NAME;
+  const bucketRegion = process.env.S3_BUCKET_REGION;
+  const accessKey = process.env.S3_ACCESS_KEY;
+  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
 
 
   const s3Client = new S3Client({
@@ -40,7 +40,7 @@ export const UploadMedia = async (file: Express.Multer.File): Promise<string> =>
     Bucket: bucketName,
     Key: random(),
     Body: file.buffer,
-    ContentType: file.mimetype
+    ContentType: file.mimetype,
   };
 
 

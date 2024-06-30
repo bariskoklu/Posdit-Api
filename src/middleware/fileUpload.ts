@@ -6,7 +6,11 @@ export const UploadSingle = (
     const storage = multer.memoryStorage();
     const upload = multer({ storage: storage });
 
-    upload.single('file');
-    next();
+    upload.single('file')(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ success: false, error: err.message });
+      }
+      next();
+    });
   }
 );

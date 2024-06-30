@@ -8,9 +8,11 @@ import { GetPostDto } from "dtos/postdto";
 // @route   POST /api/posts
 // @access  private
 export const createPost = async (req: Request, res: Response) => {
-  const [s3UploadError, s3FileKey] = await Result(UploadMedia(req.body.file));
+  console.log(req.file);
+  const [s3UploadError, s3FileKey] = await Result(UploadMedia(req.file));
 
   if (s3UploadError) {
+    console.log(s3UploadError.message);
     return res.status(400).json({
       success: false,
       error: s3UploadError.message,
@@ -82,18 +84,21 @@ export const getPosts = async (req: Request, res: Response) => {
     });
   }
 
-  if (posts.length === 0) {
-    return res.status(404).json({
-      success: false,
-      error: 'No posts found',
-    });
-  }
+  // if (posts.length === 0) {
+  //   return res.status(404).json({
+  //     success: false,
+  //     error: 'No posts found',
+  //   });
+  // }
 
   for (const post of posts) {
-    console.log(post);
     const postDto: GetPostDto = {
       ...post,
-      signedUrl: null
+      signedUrl: null,
+      upvoteCount: post.upvotes.length,
+      downvoteCount: post.downvotes.length,
+      IsDownvotedByUser: post.downvotes.indexOf(req.user._id) > -1 ? true : false,
+      IsUpvotedByUser: post.upvotes.indexOf(req.user._id) > -1 ? true : false,
     };
 
     const [getSignedUrlError, url] = await Result(getSignedUrlForMedia(post.fileKey));
@@ -111,8 +116,6 @@ export const getPosts = async (req: Request, res: Response) => {
 
     postDtos.push(postDto);
   }
-
-  console.log(postDtos);
 
   return res.status(200).json({
     success: true,
@@ -134,7 +137,7 @@ export const getPost = async (req: Request, res: Response) => {
       error: error.message,
     });
   }
-  console.log(post);
+  console.log(req.user._id);
 
   if (!post) {
     return res.status(404).json({
@@ -145,7 +148,11 @@ export const getPost = async (req: Request, res: Response) => {
 
   const postDto: GetPostDto = {
     ...post,
-    signedUrl: null
+    signedUrl: null,
+    upvoteCount: post.upvotes.length,
+    downvoteCount: post.downvotes.length,
+    IsDownvotedByUser: post.downvotes.indexOf(req.user._id) > -1 ? true : false,
+    IsUpvotedByUser: post.upvotes.indexOf(req.user._id) > -1 ? true : false,
   };
 
   const [getSignedUrlerror, url] = await Result(getSignedUrlForMedia(post.fileKey));
@@ -201,6 +208,7 @@ export const updatePost = async (req: Request, res: Response) => {
 // @access  private
 export const upvotePost = async (req: Request, res: Response) => {
   var [error, post] = await Result(PostModel.findById(req.params.id));
+  console.log(post._id);
 
   if (error) {
     return res.status(400).json({
@@ -231,10 +239,12 @@ export const upvotePost = async (req: Request, res: Response) => {
     });
   }
 
+  post.upvotes.push(req.user._id);
+
   [error, post] = await Result(PostModel.findByIdAndUpdate(req.params.id, post, {
     new: true,
     runValidators: true,
-  }));
+  }).lean());
 
   if (error) {
     return res.status(400).json({
@@ -250,9 +260,30 @@ export const upvotePost = async (req: Request, res: Response) => {
     });
   }
 
+  const postDto: GetPostDto = {
+    ...post,
+    signedUrl: null,
+    upvoteCount: post.upvotes.length,
+    downvoteCount: post.downvotes.length,
+    IsDownvotedByUser: false,
+    IsUpvotedByUser: true,
+  };
+
+  const [getSignedUrlerror, url] = await Result(getSignedUrlForMedia(post.fileKey));
+
+  if (getSignedUrlerror) {
+    return res.status(400).json({
+      success: false,
+      error: error.message,
+    });
+  }
+
+  postDto.signedUrl = url;
+  console.log(postDto.upvotes);
+
   res.status(200).json({
     success: true,
-    data: post,
+    data: postDto,
   });
 };
 
@@ -292,10 +323,12 @@ export const downvotePost = async (req: Request, res: Response) => {
     post.upvotes.splice(userIndex, 1);
   }
 
+  post.downvotes.push(req.user._id);
+
   [error, post] = await Result(PostModel.findByIdAndUpdate(req.params.id, post, {
     new: true,
     runValidators: true,
-  }));
+  }).lean());
 
   if (error) {
     return res.status(400).json({
@@ -311,9 +344,29 @@ export const downvotePost = async (req: Request, res: Response) => {
     });
   }
 
+  const postDto: GetPostDto = {
+    ...post,
+    signedUrl: null,
+    upvoteCount: post.upvotes.length,
+    downvoteCount: post.downvotes.length,
+    IsDownvotedByUser: true,
+    IsUpvotedByUser: false,
+  };
+
+  const [getSignedUrlerror, url] = await Result(getSignedUrlForMedia(post.fileKey));
+
+  if (getSignedUrlerror) {
+    return res.status(400).json({
+      success: false,
+      error: error.message,
+    });
+  }
+
+  postDto.signedUrl = url;
+
   res.status(200).json({
     success: true,
-    data: post,
+    data: postDto,
   });
 };
 
